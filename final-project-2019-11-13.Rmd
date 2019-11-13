@@ -152,7 +152,8 @@ joined_DC <- inner_join(estimated_DC, electoral_votes_DC, by = "year")
 ```{r joining to make one dataframe, include = FALSE}
 complete_data_frame <- bind_rows(complete_df, joined_DC) %>%
   select(year, state, president, party, population, electoral_votes_total) %>%
-  mutate(ev_density = electoral_votes_total / population * 10000000)
+  mutate(ev_density = electoral_votes_total / population * 10000000) %>%
+  mutate(Rep = ifelse(party == "Republican", 1, 0))
 ```
 
 ```{r grouped by year, include = FALSE}
@@ -175,9 +176,29 @@ data_frame_by_year %>%
 
 ```
 
+```{r regression model}
+recent_years <- complete_data_frame %>%
+  filter(year >= 1932)
 
-```{r animated graphic, echo = FALSE}
-## Need to make bars switch positions
+rep_model <- lm(data = recent_years, formula = ev_density ~ Rep * year)
+```
+
+```{r regression plot}
+year_df <- data.frame(Rep = rep(1, 85), year = 1932:2016)
+year_df$predicted_value <- as.numeric(predict.lm(rep_model, year_df))
+
+year_df_dem <- data.frame(Rep = rep(0, 85), year = 1932:2016)
+year_df$predicted_value_dem <- as.numeric(predict.lm(rep_model, year_df_dem))
+```
+
+```{r plot}
+ggplot(year_df) +
+  geom_point(aes(x = year, y = predicted_value),  color = "red") +
+  geom_point(aes(x = year, y = predicted_value_dem), color = "blue")
+```
+
+```{r animated graphic, echo = FALSE, eval = FALSE}
+# Need to make bars switch positions
 complete_data_frame %>%
   filter(year %in% c(2004:2016)) %>%
   ggplot(aes(x = reorder(state, ev_density), y = ev_density, fill = party)) +
