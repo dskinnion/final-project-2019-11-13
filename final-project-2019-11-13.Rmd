@@ -152,7 +152,7 @@ joined_DC <- inner_join(estimated_DC, electoral_votes_DC, by = "year")
 ```{r joining to make one dataframe, include = FALSE}
 complete_data_frame <- bind_rows(complete_df, joined_DC) %>%
   select(year, state, president, party, population, electoral_votes_total) %>%
-  mutate(ev_density = electoral_votes_total / population * 10000000) %>%
+  mutate(ev_density = electoral_votes_total / population) %>%
   mutate(Rep = ifelse(party == "Republican", 1, 0))
 ```
 
@@ -183,7 +183,7 @@ recent_years <- complete_data_frame %>%
 rep_model <- lm(data = recent_years, formula = ev_density ~ Rep * year)
 ```
 
-```{r regression plot}
+```{r regression plot data}
 year_df <- data.frame(Rep = rep(1, 85), year = 1932:2016)
 year_df$predicted_value <- as.numeric(predict.lm(rep_model, year_df))
 
@@ -191,10 +191,127 @@ year_df_dem <- data.frame(Rep = rep(0, 85), year = 1932:2016)
 year_df$predicted_value_dem <- as.numeric(predict.lm(rep_model, year_df_dem))
 ```
 
-```{r plot}
+```{r regression plot}
 ggplot(year_df) +
   geom_point(aes(x = year, y = predicted_value),  color = "red") +
   geom_point(aes(x = year, y = predicted_value_dem), color = "blue")
+```
+```{r total ev density and pop by year, echo = FALSE}
+totals_by_year <- complete_data_frame %>%
+  group_by(year) %>%
+  summarize(total_ev_density = sum(ev_density),
+            total_population = sum(population))
+
+complete_with_totals <- inner_join(complete_data_frame, totals_by_year, by = "year")
+complete_with_totals_by_year_and_party <- complete_with_totals %>%
+  mutate(population_prop = population / total_population) %>%
+  mutate(evd_over_pop_prop = ev_density / population_prop) %>%
+  mutate(evd_by_pop_prop = ev_density * population_prop) %>%
+  mutate(evd_over_total_pop = ev_density / total_population) %>%
+  mutate(ev_by_pop_prop = electoral_votes_total * population_prop) %>%
+  mutate(ev_over_pop_prop = electoral_votes_total / population_prop) %>%
+  mutate(evd_over_total_evd = ev_density / total_ev_density) %>%
+  group_by(party, year) %>%
+  summarize(mean_pop_prop = mean(population_prop),
+            total_pop_prop = sum(population_prop),
+            mean_evd_over_pop_prop = mean(evd_over_pop_prop),
+            total_evd_over_pop_prop = sum(evd_over_pop_prop),
+            mean_evd_by_pop_prop = mean(evd_by_pop_prop),
+            total_evd_by_pop_prop = sum(evd_by_pop_prop),
+            mean_evd_over_total_pop = mean(evd_over_total_pop),
+            total_evd_over_total_pop = sum(evd_over_total_pop),
+            mean_ev_by_pop_prop = mean(ev_by_pop_prop),
+            total_ev_by_pop_prop = sum(ev_by_pop_prop),
+            mean_ev_over_pop_prop = mean(ev_over_pop_prop),
+            total_ev_over_pop_prop = sum(ev_over_pop_prop),
+            mean_evd_over_total_evd = mean(evd_over_total_evd),
+            total_evd_over_total_evd = sum(evd_over_total_evd))
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = mean_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = total_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = mean_evd_over_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = total_evd_over_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = mean_evd_by_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = total_evd_by_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = mean_evd_over_total_pop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = total_evd_over_total_pop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(party %in% c("Democratic", "Republican")) %>%
+  filter(year > 1900) %>%
+ggplot(aes(x = year, y = mean_ev_by_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = total_ev_by_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(party %in% c("Democratic", "Republican")) %>%
+  filter(year > 1900) %>%
+ggplot(aes(x = year, y = mean_ev_over_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = total_ev_over_pop_prop, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = mean_evd_over_total_evd, group = party, color = party)) +
+  geom_point() +
+  geom_line()
+
+complete_with_totals_by_year_and_party %>%
+  filter(year > 1928) %>%
+ggplot(aes(x = year, y = total_evd_over_total_evd, group = party, color = party)) +
+  geom_point() +
+  geom_line()
 ```
 
 ```{r animated graphic, echo = FALSE, eval = FALSE}
